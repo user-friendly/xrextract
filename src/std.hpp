@@ -29,3 +29,6 @@
 #include <locale>
 #include <stdexcept>
 #include <typeinfo>
+
+// Boost headers.
+#include <boost/program_options.hpp>

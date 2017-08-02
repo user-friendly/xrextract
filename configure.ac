@@ -26,6 +26,14 @@ AC_LANG([C++])
 AX_CXX_COMPILE_STDCXX_14([noext], [mandatory])
 
 # Checks for libraries.
+AX_BOOST_BASE([1.63],
+        [],
+        [AC_MSG_ERROR([Minimal Boost library requirments not met.])
+])
+
+AX_BOOST_SYSTEM
+AX_BOOST_FILESYSTEM
+AX_BOOST_PROGRAM_OPTIONS
 
 # Checks for header files.
 
