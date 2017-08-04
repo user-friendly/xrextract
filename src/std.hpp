@@ -8,27 +8,14 @@
 #endif
 
 // C++ STD headers.
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
-#include <cstdint>
-//#include <cinttypes>
-#include <iterator>
-#include <memory>
 #include <iostream>
-#include <fstream>
-#include <sstream>
-#include <iomanip>
-#include <functional>
 #include <algorithm>
 #include <string>
-#include <array>
 #include <vector>
-#include <map>
-#include <set>
-#include <locale>
 #include <stdexcept>
-#include <typeinfo>
+// STD Headers actually used...
+#include <regex>
 
 // Boost headers.
 #include <boost/program_options.hpp>
+#include <boost/filesystem.hpp>
