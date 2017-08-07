@@ -18,7 +18,83 @@ namespace xrextract {
     fs::path dat;
   };
 
+  /**
+   * An md5 checksum.
+   *
+   * C-style string.
+   */
+  typedef array<char, 33> md5sum;
   
+  /**
+   * An asset entry found in .cat files.
+   */
+  struct asset_entry {
+    fs::path filename;
+    /**
+     * Size in bytes.
+     * 
+     * @TODO Maximum size of an 32 bit int is ~ 4 GB.
+     *       Figure out of this member can be reduced to 32 bit int.
+     */
+    uint64_t size;
+    /**
+     * Unix time stamp of the file.
+     * 
+     * Needs to be at least 45 bits. See std::chrono.
+     */
+    uint64_t ts;
+    // @TODO Maybe a string would be better here?
+    
+    md5sum checksum;
+  };
+
+  /**
+   * A container for asset entries.
+   */
+  typedef vector<asset_entry> asset_entries;
+  
+  asset_entries get_assets(const data_file& df) {
+    asset_entries entries {};
+    ifstream in(df.cat.native());
+    // Enable stream exception throws for specified states.
+    // Note that eof state is not set.
+    in.exceptions(ios_base::badbit | ios_base::failbit);
+
+    // Format of .cat files is as follows:
+    // [relative asset file name] [size in bytes] [timestamp] [md5 checksum]
+    string checksum (32, '\0');
+    while(!in.eof()) {
+      try {
+        string rel_path {};
+        uint64_t sz {}, ts {};
+        checksum.clear();
+        
+        // @FIXME Spaces are allowed in file names... Throws exception.
+        in >> rel_path >> sz >> ts >> checksum;
+
+        asset_entry ae { rel_path, sz, ts, {} };
+
+        if (checksum.length() == 32) {
+          // Bad.. bad, bad, bad.
+          strncpy(ae.checksum.data(), checksum.c_str(), 32);
+          ae.checksum[33] = '\0';
+        }
+        else {
+          cerr << "error: invalid checksum for asset `" << rel_path << "`\n";
+        }
+
+        cout << ae.filename.native() << " " << ae.size << " " << ae.ts << " " << ae.checksum.data() << "\n";
+        //break;
+      }
+      catch (std::ios_base::failure &fail) {
+        cerr << "error: failed to read entry from: " << df.cat << "\n";
+        cerr << "\tWhat: " << fail.what() << ", code: " << fail.code() << "\n";
+        break;
+      }
+    }
+
+    return entries;
+  };
 }
 
 namespace xr = xrextract;
@@ -43,6 +119,8 @@ void printLegal();
 int main(int argc, char* argv[]) {
   printLegal();
 
+  cout << "File test...\n";
+  
   try {
     fs::path data_dir {};
     
@@ -134,6 +212,9 @@ int main(int argc, char* argv[]) {
         cout << "Found cat & dat file pairs:\n";
         for (const xr::data_file& entry : data_files) {
           cout << "\t" << entry.name << "\n";
+
+          xr::get_assets(entry);
+          break;
         }
       }
       else {
