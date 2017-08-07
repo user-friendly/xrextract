@@ -19,6 +19,7 @@
 #include <cstdint>
 
 // Boost headers.
+#include <boost/algorithm/string.hpp>
 #include <boost/program_options.hpp>
 #include <boost/filesystem.hpp>
 

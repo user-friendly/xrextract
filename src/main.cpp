@@ -3,20 +3,19 @@
  * This the program's main entry file.
  */
 
+// @TODO The data flow can be considered a stream.
+// There might be no need to back reference any cat entries.
+// Parse one line at a time and move the .dat "pointer" forward.
+
 #include "std.hpp"
 
 namespace fs = boost::filesystem;
 namespace po = boost::program_options;
+namespace al = boost::algorithm;
 using namespace std;
 
 namespace xrextract {
   typedef fs::path::string_type path_string;
-  
-  struct data_file {
-    path_string name;
-    fs::path cat;
-    fs::path dat;
-  };
 
   /**
    * An md5 checksum.
@@ -52,45 +51,103 @@ namespace xrextract {
    * A container for asset entries.
    */
   typedef vector<asset_entry> asset_entries;
+
+  /**
+   * Simple data structure for data files.
+   */
+  struct data_file {
+    path_string name;
+    fs::path cat;
+    fs::path dat;
+
+    asset_entries assets;
+  };
   
   asset_entries get_assets(const data_file& df) {
     asset_entries entries {};
     ifstream in(df.cat.native());
-    // Enable stream exception throws for specified states.
-    // Note that eof state is not set.
-    in.exceptions(ios_base::badbit | ios_base::failbit);
+    // Enable stream exception throws for non-recoverable error states.
+    in.exceptions(ios_base::badbit);
 
     // Format of .cat files is as follows:
     // [relative asset file name] [size in bytes] [timestamp] [md5 checksum]
-    string checksum (32, '\0');
-    while(!in.eof()) {
+
+    // @TODO Consider using Regular Expressions... might be easier in the end.
+    
+    using sst = string::size_type;
+    string line {}, md5(32, '\0'), number (128, '\0'), rel_path {};
+    uint64_t sz, ts;
+    sst lpos;
+
+    // Line number counter.
+    uint32_t ln {0};
+    while(true) {
       try {
-        string rel_path {};
-        uint64_t sz {}, ts {};
-        checksum.clear();
-        
-        // @FIXME Spaces are allowed in file names... Throws exception.
-        in >> rel_path >> sz >> ts >> checksum;
-
-        asset_entry ae { rel_path, sz, ts, {} };
-
-        if (checksum.length() == 32) {
-          // Bad.. bad, bad, bad.
-          strncpy(ae.checksum.data(), checksum.c_str(), 32);
-          ae.checksum[33] = '\0';
-        }
-        else {
-          cerr << "error: invalid checksum for asset `" << rel_path << "`\n";
-        }
-
-        cout << ae.filename.native() << " " << ae.size << " " << ae.ts << " " << ae.checksum.data() << "\n";
-        //break;
+        getline(in, line);
       }
       catch (std::ios_base::failure &fail) {
         cerr << "error: failed to read entry from: " << df.cat << "\n";
-        cerr << "\tWhat: " << fail.what() << ", code: " << fail.code() << "\n";
+        cerr << "\twhat: " << fail.what() << ", code: " << fail.code() << "\n";
         break;
       }
+
+      if (in.eof()) {
+        break;
+      }
+
+      ln++;
+      md5.clear();
+      rel_path.clear();
+      ts = sz = 0;
+
+      string::reverse_iterator rbegin {}, rend {};
+
+      // Parse md5 checksum.
+      rbegin = find(line.rbegin(), line.rend(), ' ');
+      md5.append(rbegin.base(), line.end());
+
+      // Parse timestamp.
+      try {
+        number.clear();
+        rend = find(++rbegin, line.rend(), ' ');
+        number.append(rend.base(), rbegin.base());
+        ts = stoul(number);
+      } catch (const std::logic_error& e) {
+        cerr << "error: failed to parse timestamp: " << e.what() << "\n";
+        cerr << "\t\tline " << ln << ": " << line << "\n";
+        break;
+      }
+
+      // Parse size.
+      try {
+        number.clear();
+        rbegin = ++rend;
+        rend = find(rbegin, line.rend(), ' ');
+        number.append(rend.base(), rbegin.base());
+        sz = stoul(number);
+      } catch (const std::logic_error& e) {
+        cerr << "error: failed to parse size: " << e.what() << "\n";
+        cerr << "\t\tline " << ln << ": " << line << "\n";
+        break;
+      }
+
+      // Get relative asset filename.
+      rel_path.append(line.begin(), (++rend).base());
+      al::trim(rel_path);
+
+      // Construct a new asset entry.
+      asset_entry ae { rel_path, sz, ts, {} };
+      
+      if (md5.length() == 32) {
+        // Bad.. bad, bad, bad.
+        strncpy(ae.checksum.data(), md5.c_str(), 32);
+        ae.checksum[33] = '\0';
+      }
+      else {
+        cerr << "error: invalid checksum string for asset `" << rel_path << "`\n";
+      }
+
+      entries.push_back(ae);
     }
 
     return entries;
@@ -102,7 +159,7 @@ namespace xr = xrextract;
 /**
  * Print legal information.
  */
-void printLegal();
+void print_legal();
 
 /**
  * Program's main entry point.
@@ -117,10 +174,6 @@ void printLegal();
  *   Returns UNIX style exit status.
  */
 int main(int argc, char* argv[]) {
-  printLegal();
-
-  cout << "File test...\n";
-  
   try {
     fs::path data_dir {};
     
@@ -128,6 +181,7 @@ int main(int argc, char* argv[]) {
     desc.add_options()
       ("help,h", "produce help message")
       ("data-dir,d", po::value<string>(), "directory where the .dat files reside")
+      ("version,v", "print program information")
       ;
 
     po::variables_map vm;        
@@ -136,6 +190,11 @@ int main(int argc, char* argv[]) {
 
     if (vm.count("help")) {
       cout << desc << "\n";
+      return EXIT_SUCCESS;
+    }
+
+    if (vm.count("version")) {
+      print_legal();
       return EXIT_SUCCESS;
     }
 
@@ -157,12 +216,10 @@ int main(int argc, char* argv[]) {
     // Iterate over directory files.
     std::vector<fs::path> dir_files;
     // @TODO Only look for .cat files and when assembling the xr::data_file objects look for .dat files.
-    std::regex pattern("(?:ext_|subst_)?\\d+\\.(?:c|d)at");
+    std::regex pattern("(?:ext_|subst_)?\\d+\\.(?:c|d)at$");
     for (const fs::directory_entry& file : fs::directory_iterator(data_dir)) {
       if (fs::is_regular_file(file.status())) {
-        //cout << "\t" << file.path();
         if (std::regex_search(file.path().filename().c_str(), pattern)) {
-          // cout << " - file is a data file";
           if (!fs::is_symlink(file.path())) {
             dir_files.push_back(file.path());
           }
@@ -171,7 +228,6 @@ int main(int argc, char* argv[]) {
             dir_files.push_back(fs::read_symlink(file.path()));
           }
         }
-        // cout << "\n";
       }
     }
 
@@ -183,7 +239,7 @@ int main(int argc, char* argv[]) {
           return a.filename().string() < b.filename().string();
         });
 
-      std::vector<xr::data_file> data_files;
+      vector<xr::data_file> data_files;
 
       // Do not modify the container being iterated over!
       cout << "Found data files: " << "\n";
@@ -210,11 +266,11 @@ int main(int argc, char* argv[]) {
 
       if (!data_files.empty()) {
         cout << "Found cat & dat file pairs:\n";
-        for (const xr::data_file& entry : data_files) {
-          cout << "\t" << entry.name << "\n";
+        for (xr::data_file& entry : data_files) {
+          cout << "\t" << entry.cat.filename().native() << ": ";
 
-          xr::get_assets(entry);
-          break;
+          entry.assets = move(xr::get_assets(entry));
+          cout << entry.assets.size() << " assets\n";
         }
       }
       else {
@@ -237,7 +293,7 @@ int main(int argc, char* argv[]) {
   return EXIT_SUCCESS;
 }
 
-void printLegal()
+void print_legal()
 {
 #if defined PACKAGE_NAME && defined PACKAGE_VERSION
   std::cout << PACKAGE_NAME << " " << PACKAGE_VERSION << ' ';
