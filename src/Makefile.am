@@ -11,10 +11,37 @@
 AM_CXXFLAGS = $(BOOST_CPPFLAGS)
 AM_LDFLAGS = $(BOOST_LDFLAGS)
 
+# @TODO Move this to the m4 macro.
+# Sloppy job overall, but it should work.
+#pch_files = *.hpp.?ch
+pch_file = extlibs.hpp.$(ax_cxx_pch_ext)
+pch_file_source = $(abs_top_srcdir)/src/extlibs.hpp
+pch_file_guard = $(abs_top_builddir)/src/extlibs.hpp
+pch_file_guard_source = $(abs_top_srcdir)/src/extlibs-guard.hpp
+
 bin_PROGRAMS      = xrextract
-xrextract_SOURCES = main.cpp
-xrextract_CXXFLAGS = $(AM_CXXFLAGS)
+xrextract_SOURCES = main.cpp \
+					assets.cpp
+# Setting CC flags, seem to force the compiler to be CC.
+#xrextract_CFLAGS = $(AM_CFLAGS)
+# Including the PCH guard file, should hint at GCC/Clang to use the actual PCH file.
+xrextract_CXXFLAGS = -include $(pch_file_guard) $(AM_CXXFLAGS)
 xrextract_LDADD = $(LDADD) \
                $(BOOST_SYSTEM_LIB) \
                $(BOOST_FILESYSTEM_LIB) \
                $(BOOST_PROGRAM_OPTIONS_LIB)
+
+# AM error: configure substitutions are not allowed in _SOURCES variables
+nodist_xrextract_SOURCES = $(pch_file) $(pch_file_guard)
+
+BUILT_SOURCES = $(pch_file) $(pch_file_guard)
+CLEANFILES = $(pch_file) $(pch_file_guard)
+
+# Precompiled header file.
+$(pch_file): $(pch_file_source)
+	@printf "%s: %s\n" "Create precompiled header: " $<
+	$(CXXCOMPILE) -c $< -o $@
+
+$(pch_file_guard): $(pch_file_guard_source)
+	@printf "%s: %s\n" "Create precompiled header guard: " $<
+	cp $< $@

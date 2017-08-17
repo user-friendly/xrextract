@@ -3,7 +3,7 @@
  * Assets declarations.
  */
 
-#include "std.hpp"
+#include "extlibs.hpp"
 
 namespace fs = boost::filesystem;
 using namespace std;

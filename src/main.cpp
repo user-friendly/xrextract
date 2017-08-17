@@ -7,7 +7,7 @@
 // There might be no need to back reference any cat entries.
 // Parse one line at a time and move the .dat "pointer" forward.
 
-#include "std.hpp"
+#include "extlibs.hpp"
 #include "assets.hpp"
 
 # if defined(_WIN32) || defined(__CYGWIN__) // Windows default, including MinGW and Cygwin
@@ -76,7 +76,8 @@ int main(int argc, char* argv[]) {
       cout << "Data directory is: " << data_dir.string() << endl;
     }
     else {
-      throw runtime_error::runtime_error("Data directory either does not exist or is not a directory.");
+      runtime_error e {"Data directory either does not exist or is not a directory."};
+      throw e;
     }
     
     // Iterate over directory files.

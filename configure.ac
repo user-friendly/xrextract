@@ -18,12 +18,28 @@ AX_CHECK_ENABLE_DEBUG([no], [DEBUG])
 AX_CHECK_ENABLE_PEDANTIC([no])
 
 # Checks for programs.
+AC_PROG_CC([clang gcc])
 AC_PROG_CXX([clang++ c++ g++ gcc])
 AC_PROG_INSTALL
 
 # Checks for languages.
 AC_LANG([C++])
 AX_CXX_COMPILE_STDCXX_14([noext], [mandatory])
+
+# @TODO Giving up on this M4 macro, for the time being.
+# Enable PCH.
+#AX_PRECOMPILED_HEADERS
+# Defaults to GCC's PCH extension.
+ax_cc_pch_ext="gch"
+if test "x${CC%%lang*}" = "xc"; then
+   ax_cc_pch_ext="pch"
+fi
+AC_SUBST([ax_cc_pch_ext])
+ax_cxx_pch_ext="gch"
+if test "x${CXX%%lang*}" = "xc"; then
+   ax_cxx_pch_ext="pch"
+fi
+AC_SUBST([ax_cxx_pch_ext])
 
 # Checks for libraries.
 AX_BOOST_BASE([1.63],
@@ -62,6 +78,10 @@ echo \
  CFLAGS: ${CFLAGS}
  CPPFLAGS: ${CPPFLAGS}
  CXXFLAGS: ${CXXFLAGS}
+
+ -- Precompiled header flags 
+ CFLAGS_PCH: ${CFLAGS_PCH}
+ CXXFLAGS_PCH: ${CXXFLAGS_PCH}
 
  -- Linker
  LDFLAGS: ${LDFLAGS}

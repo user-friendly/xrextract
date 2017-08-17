@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
 
+if [ ! -f "configure" ]; then
+    echo "error: no configure script, run autoreconf"
+    exit 1
+fi
+
 if [ ! "$1" = "" ]; then
     SOURCE_DIR="$1"
 else
@@ -26,6 +31,7 @@ cd $BUILD_DIR
 # The configure script should use these environmental variables.
 CC=CLANG
 CXX=clang++
+# The -H option traces includes, for both Clang & GCC. Useful for debugging PCH useage.
 CPPFLAGS="-I$SOURCE_DIR/libs/include"
 
 # Use the custom built Boost & SDL libraries.
