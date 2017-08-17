@@ -107,12 +107,14 @@ build-aux
 # it has a ton of exclusions which might
 # interfere with some future files to be
 # added.
-# 
-# Yes, but it does not.
+#
+.vs
 *.VC.db
 *.VC.opendb
 ipch
 x64
+Debug
+Release
 
 # Eclipse
 *.pydevproject

@@ -3,6 +3,9 @@
  * Header file for all libraries used.
  */
 
+#ifndef __STD_HPP
+#define __STD_HPP
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -25,3 +28,5 @@
 
 // GSL
 #include <gsl/gsl>
+
+#endif // __STD_HPP
