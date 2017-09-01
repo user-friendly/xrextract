@@ -58,7 +58,17 @@ namespace xrextract {
   };
 
   /**
+  * A container for data file entries.
+  */
+  typedef vector<data_file> data_file_entries;
+
+  /**
    * Retrieve asset entries from a data file.
    */
   asset_entries get_assets(const data_file& df);
+
+  /**
+   * Retrieve data files from a directory.
+   */
+  data_file_entries get_data_files_from_directory(const fs::path& data_dir);
 }
