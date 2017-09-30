@@ -21,7 +21,8 @@ pch_file_guard_source = $(abs_top_srcdir)/src/extlibs-guard.hpp
 
 bin_PROGRAMS      = xrextract
 xrextract_SOURCES = main.cpp \
-					assets.cpp
+					assets.cpp \
+					filesystem.cpp
 # Setting CC flags, seem to force the compiler to be CC.
 #xrextract_CFLAGS = $(AM_CFLAGS)
 # Including the PCH guard file, should hint at GCC/Clang to use the actual PCH file.

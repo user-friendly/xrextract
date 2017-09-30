@@ -3,6 +3,9 @@
  * Assets declarations.
  */
 
+#ifndef __ASSETS_HPP
+#define __ASSETS_HPP
+
 #include "extlibs.hpp"
 
 namespace fs = boost::filesystem;
@@ -50,6 +53,10 @@ namespace xrextract {
   * Simple data structure for data files.
   */
   struct data_file {
+    // @TODO Constructor to load all assets.
+    // A seperate function may not be needed, since the list
+    // of assets is static and assembled once per data_file
+    // object creation.
     path_string name;
     fs::path cat;
     fs::path dat;
@@ -66,9 +73,6 @@ namespace xrextract {
    * Retrieve asset entries from a data file.
    */
   asset_entries get_assets(const data_file& df);
-
-  /**
-   * Retrieve data files from a directory.
-   */
-  data_file_entries get_data_files_from_directory(const fs::path& data_dir);
 }
+
+#endif // __ASSETS_HPP

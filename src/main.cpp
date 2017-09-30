@@ -9,6 +9,7 @@
 
 #include "extlibs.hpp"
 #include "assets.hpp"
+#include "filesystem.hpp"
 
 # if defined(_WIN32) || defined(__CYGWIN__) // Windows default, including MinGW and Cygwin
 #   define WINDOWS_API
@@ -44,8 +45,8 @@ int main(int argc, char* argv[]) {
     po::options_description desc("Available options are");
     desc.add_options()
       ("help,h", "produce help message")
-      ("data-dir,d", po::value<string>(), "directory where the .dat files reside; ignored if --data-file option is used")
-      ("data-file,f", po::value< vector<string> >(), "provide a list of .dat files")
+      ("data-dir,d", po::value<string>(), "directory where the cat/dat files reside; if ommitted, current directory is used")
+      ("data-file,f", po::value< vector<string> >(), "provide a list of .cat file; can be used multiple times")
       ("version,v", "print program information")
       ;
 
@@ -63,6 +64,14 @@ int main(int argc, char* argv[]) {
       return EXIT_SUCCESS;
     }
 
+    xr::data_file_entries dfs {};
+    
+    if (vm.count("data-file")) {
+      vector<string> catfiles = vm["data-file"].as< vector<string> >();
+      xr::data_file_entries catdfs = xr::get_data_files_from_filenames(catfiles);
+      move(catdfs.begin(), catdfs.end(), catdfs.end());
+    }
+
     fs::path data_dir {};
     if (vm.count("data-dir")) {
       data_dir = vm["data-dir"].as<string>();
@@ -74,13 +83,13 @@ int main(int argc, char* argv[]) {
 
     if (fs::is_directory(data_dir)) {
       cout << "Data directory is: " << data_dir.string() << endl;
+      xr::data_file_entries dirdfs = xr::get_data_files_from_directory(data_dir);
+      move(dirdfs.begin(), dirdfs.end(), dfs.end());
     }
     else {
-      runtime_error e {"Data directory either does not exist or is not a directory."};
-      throw e;
+      cerr << "error: data directory either does not exist or is not a directory." << endl;
     }
-    
-    xr::data_file_entries dfs { xr::get_data_files_from_directory(data_dir) };
+
     if (dfs.empty() == false) {
       cout << "\n";
       for (const xr::data_file& df : dfs) {
