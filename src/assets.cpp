@@ -12,8 +12,73 @@ namespace al = boost::algorithm;
 using namespace std;
 
 namespace xrextract {
+  void extract_assets(const data_file& df) {
+    throw runtime_error("TODO Implement void extract_assets(const data_file& df)");
+  ;}
+  
   void extract_assets(const data_file& df, const regex& filter) {
+    array<char, 4096> rdbuff;
+    ifstream dat_in {df.dat.string()};
+    uint64_t read_bytes {0}, written_bytes {0};
+    streamsize read_chunk_size {0};
     
+    for (const asset_entry& ae : df.assets) {
+      if (!regex_search(ae.filename.string(), filter)) {
+        dat_in.seekg(ae.size, ios_base::cur);
+        continue;
+      }
+      cout << "extract " << ae.filename.string() << " ... " << flush;
+
+      // cout << "root_name: " << ae.filename.root_name().string() << endl;
+      // cout << "root_directory: " << ae.filename.root_directory().string() << endl;
+      // cout << "root_path: " << ae.filename.root_path().string() << endl;
+      // cout << "relative_path: " << ae.filename.relative_path().string() << endl;
+      //cout << "parent_path: " << ae.filename.parent_path().string() << endl;
+      fs::create_directories(ae.filename.parent_path());
+      
+      ofstream asset_out {ae.filename.string(), ios_base::out | ios_base::binary | ios_base::trunc};
+
+      written_bytes = 0;
+      
+      // Asset entry size is in bytes.
+      while (written_bytes < ae.size) {
+        if (!dat_in.good()) {
+          break;
+        }
+        fill(rdbuff.begin(), rdbuff.end(), 0);
+
+        read_chunk_size = rdbuff.size();
+        if (written_bytes + read_chunk_size > ae.size) {
+          read_chunk_size = written_bytes % rdbuff.size();
+        }
+        dat_in.read(rdbuff.data(), read_chunk_size);
+        if (dat_in.gcount() > 0) {
+          // Bytes were read.
+          if (rdbuff.size() >= dat_in.gcount()) {
+            
+            // Write read buffer to asset file.
+            asset_out.write(rdbuff.data(), dat_in.gcount());
+            if (asset_out.good()) {
+              written_bytes += read_bytes;
+            }
+            else {
+              cerr << "error: failed to write to asset file" << endl;
+              return;
+            }
+          }
+          else {
+            cerr << "error: read more bytes than buffer can hold" << endl;
+            return;
+          }
+        }
+        else {
+          cerr << "error: failed to read from dat file" << endl;
+          return;
+        }
+      }
+
+      cout << "done" << endl;
+    };
   };
   
   asset_entries get_assets(const data_file& df) {

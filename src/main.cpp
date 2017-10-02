@@ -115,9 +115,16 @@ int main(int argc, char* argv[]) {
             }
           }
         }
+        else {
+          cout << "extracting assets: " << endl;
+          if (vm.count("filter-assets")) {
+            xr::extract_assets(df, filter_pattern);
+          }
+          else {
+            xr::extract_assets(df);
+          }
+        }
       }
-
-      
     }
   }
   catch(exception& e) {

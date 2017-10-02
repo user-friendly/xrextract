@@ -74,6 +74,7 @@ namespace xrextract {
    */
   asset_entries get_assets(const data_file& df);
 
+  void extract_assets(const data_file& df);
   void extract_assets(const data_file& df, const regex& filter);
 }
 
