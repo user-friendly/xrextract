@@ -3,6 +3,8 @@
  * Filesystem definitions file.
  */
 
+// Visual studio mandates the the PCH source header file is included.
+#include "extlibs.hpp"
 #include "filesystem.hpp"
 #include "assets.hpp"
 
@@ -117,7 +119,7 @@ namespace xrextract {
       }
     }
     else {
-      cerr << "error: no data files found in directory: " << data_dir << endl;
+      cout << "info: no data files found in directory: " << data_dir << endl;
     }
 
     return data_files;

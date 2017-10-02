@@ -11,12 +11,6 @@
 #include "assets.hpp"
 #include "filesystem.hpp"
 
-# if defined(_WIN32) || defined(__CYGWIN__) // Windows default, including MinGW and Cygwin
-#   define WINDOWS_API
-# else
-#   define POSIX_API 
-# endif
-
 namespace fs = boost::filesystem;
 namespace po = boost::program_options;
 using namespace std;
@@ -69,7 +63,9 @@ int main(int argc, char* argv[]) {
     if (vm.count("data-file")) {
       vector<string> catfiles = vm["data-file"].as< vector<string> >();
       xr::data_file_entries catdfs = xr::get_data_files_from_filenames(catfiles);
-      move(catdfs.begin(), catdfs.end(), catdfs.end());
+      if (!catdfs.empty()) {
+        move(catdfs.begin(), catdfs.end(), back_inserter(dfs));
+      }
     }
 
     fs::path data_dir {};
@@ -84,7 +80,9 @@ int main(int argc, char* argv[]) {
     if (fs::is_directory(data_dir)) {
       cout << "Data directory is: " << data_dir.string() << endl;
       xr::data_file_entries dirdfs = xr::get_data_files_from_directory(data_dir);
-      move(dirdfs.begin(), dirdfs.end(), dfs.end());
+      if (!dirdfs.empty()) {
+        move(dirdfs.begin(), dirdfs.end(), back_inserter(dfs));
+      }
     }
     else {
       cerr << "error: data directory either does not exist or is not a directory." << endl;
@@ -94,6 +92,10 @@ int main(int argc, char* argv[]) {
       cout << "\n";
       for (const xr::data_file& df : dfs) {
         cout << "data file [" << df.dat.string() << "] has " << df.assets.size() << " assets" << endl;
+
+        for (const xr::asset_entry& ae : df.assets) {
+          cout << "\t" << ae.filename.string() << endl;
+        }
       }
     }
   }

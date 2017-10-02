@@ -6,6 +6,8 @@
 #ifndef __EXTLIBS_HPP
 #define __EXTLIBS_HPP
 
+// @TODO Sort out this mess.
+#include "config.hpp"
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
