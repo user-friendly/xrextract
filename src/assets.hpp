@@ -73,6 +73,8 @@ namespace xrextract {
    * Retrieve asset entries from a data file.
    */
   asset_entries get_assets(const data_file& df);
+
+  void extract_assets(const data_file& df, const regex& filter);
 }
 
 #endif // __ASSETS_HPP

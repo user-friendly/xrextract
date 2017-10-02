@@ -12,6 +12,10 @@ namespace al = boost::algorithm;
 using namespace std;
 
 namespace xrextract {
+  void extract_assets(const data_file& df, const regex& filter) {
+    
+  };
+  
   asset_entries get_assets(const data_file& df) {
     asset_entries entries {};
     basic_ifstream<string::value_type> in(df.cat.native(), ios_base::in | ios_base::binary);
@@ -169,5 +173,5 @@ namespace xrextract {
     cout.flags(cout_flags);
     
     return entries;
-  };
+  };  
 }

@@ -60,6 +60,11 @@ int main(int argc, char* argv[]) {
       return EXIT_SUCCESS;
     }
 
+    regex filter_pattern {};
+    if (vm.count("filter-assets")) {
+      filter_pattern = vm["filter-assets"].as<string>();
+    }
+
     xr::data_file_entries dfs {};
     
     if (vm.count("data-file")) {
@@ -96,11 +101,23 @@ int main(int argc, char* argv[]) {
         cout << "data file [" << df.dat.string() << "] has " << df.assets.size() << " assets" << endl;
 
         if (vm.count("list-assets")) {
-          for (const xr::asset_entry& ae : df.assets) {
-            cout << "\t" << ae.filename.string() << endl;
+          if (vm.count("filter-assets")) {
+            for (const xr::asset_entry& ae : df.assets) {
+              if (regex_search(ae.filename.string(), filter_pattern)) {
+                cout << "F";
+              }
+              cout << "\t" << ae.filename.string() << endl;
+            }
+          }
+          else {
+            for (const xr::asset_entry& ae : df.assets) {
+              cout << "\t" << ae.filename.string() << endl;
+            }
           }
         }
       }
+
+      
     }
   }
   catch(exception& e) {
