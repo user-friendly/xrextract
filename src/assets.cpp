@@ -14,7 +14,7 @@ using namespace std;
 namespace xrextract {
   asset_entries get_assets(const data_file& df) {
     asset_entries entries {};
-    ifstream in(df.cat.native(), ios_base::in | ios_base::binary);
+    basic_ifstream<string::value_type> in(df.cat.native(), ios_base::in | ios_base::binary);
     // Enable stream exception throws for non-recoverable error states.
     in.exceptions(ios_base::badbit);
 
@@ -22,43 +22,68 @@ namespace xrextract {
     // [relative asset file name] [size in bytes] [timestamp] [md5 checksum]
 
     // @TODO Consider using Regular Expressions capturing.
-
+    
     string line {}, md5(32, '\0'), number(128, '\0'), rel_path{};
     uint64_t sz, ts;
+    typedef array<string::value_type, 256> readbuffer;
+    readbuffer rdbuff;
+    double readbytes {0}, filebytes {static_cast<double>(fs::file_size(df.cat))}, readprog {0};
+
+    auto cout_precision = cout.precision();
+    auto cout_flags = cout.flags();
+    cout << fixed;
+    cout.precision(2);
+    chrono::time_point<chrono::steady_clock>
+      start_time = chrono::steady_clock::now(),
+      current_time = chrono::steady_clock::now();
+    
+    cout << "info: get assets list from file " << df.cat.native() <<  "... " << flush;
 
     // Line number counter.
-    uint32_t ln{ 0 };
+    uint32_t ln { 0 };
     while (true) {
       if (in.eof()) {
         break;
       }
 
-      cout << "info: bytes read: " << in.tellg() << endl;
-
-      throw exception{"TODO Implement a line read and also count bytes read."};
-
       // Clear read buffer.
-      //line.clear();
-      //string::value_type ch {};
-      //string::iterator it {line.begin()};
-      //while (it != line.end()) {
-      //  in.get(ch);
-      //  if (ch == '\n' || in.eof()) {
-      //    break;
-      //  }
-      //  *it = ch;
-      //  it++;
-      //}
+      line.clear();
+      string::value_type ch {'\0'};
+      readbuffer::iterator it, end;
+      while (!(ch == '\n' || in.eof())) {
+        rdbuff.fill('\0');
+        it = rdbuff.begin();
+        end = rdbuff.end();
+        end--;
+        
+        while (it != end) {
+          in.get(ch);
+          readbytes++;
+          if (ch == '\n' || in.eof()) {
+            // Make sure stats are accurate.
+            if (in.eof()) {
+              readbytes--;
+            }
+            break;
+          }
+          *it = ch;
+          it++;
+        }
+        
+        line.append(rdbuff.data());
+      }
 
-      //try {
-      //  getline(in, line);
-      //}
-      //catch (ios_base::failure &fail) {
-      //  cerr << "error: failed to read entry from: " << df.cat << endl;
-      //  cerr << "\twhat: " << fail.what() << ", code: " << fail.code() << endl;
-      //  break;
-      //}
-
+      readprog = ((readbytes / filebytes) * 100);
+      if (1 <= chrono::duration_cast<chrono::seconds>(current_time - start_time).count()) {
+        cout << readprog << "% " << flush;
+        
+        start_time = chrono::steady_clock::now();
+        current_time = chrono::steady_clock::now();
+      }
+      else {
+        current_time = chrono::steady_clock::now();
+      }
+      
       al::trim(line);
       if (line.empty()) {
         continue;
@@ -90,7 +115,7 @@ namespace xrextract {
       catch (const logic_error& e) {
         cerr << "error: failed to parse timestamp: " << e.what() << endl;
         cerr << "\t\tline " << ln << ": " << line << endl;
-        break;
+        continue;
       }
 
       // Parse size.
@@ -109,7 +134,7 @@ namespace xrextract {
       catch (const logic_error& e) {
         cerr << "error: failed to parse size: " << e.what() << endl;
         cerr << "\t\tline " << ln << ": " << line << endl;
-        break;
+        continue;
       }
 
       // Get relative asset filename.
@@ -125,17 +150,24 @@ namespace xrextract {
       asset_entry ae{ rel_path, sz, ts,{} };
 
       if (md5.length() == 32) {
-        // Bad.. bad, bad, bad.
+        // @TODO Consider using another approach.
         strncpy(ae.checksum.data(), md5.c_str(), 32);
         ae.checksum.at(32) = '\0';
       }
       else {
         cerr << "error: invalid checksum string for asset `" << rel_path << "`" << endl;
+        continue;
       }
 
       entries.push_back(ae);
     }
 
+    cout << readprog << "% " << flush;
+    cout << "done" << endl;
+
+    cout.precision(cout_precision);
+    cout.flags(cout_flags);
+    
     return entries;
   };
 }

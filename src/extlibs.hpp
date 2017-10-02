@@ -19,6 +19,7 @@
 #include <vector>
 #include <algorithm>
 #include <regex>
+#include <chrono>
 // C++ STD C headers.
 #include <cstdlib>
 #include <cstdint>

@@ -41,6 +41,8 @@ int main(int argc, char* argv[]) {
       ("help,h", "produce help message")
       ("data-dir,d", po::value<string>(), "directory where the cat/dat files reside; if ommitted, current directory is used")
       ("data-file,f", po::value< vector<string> >(), "provide a list of .cat file; can be used multiple times")
+      ("list-assets,l", "list assets for each data file")
+      ("filter-assets,F", po::value< string >(), "only extract given assets")
       ("version,v", "print program information")
       ;
 
@@ -93,8 +95,10 @@ int main(int argc, char* argv[]) {
       for (const xr::data_file& df : dfs) {
         cout << "data file [" << df.dat.string() << "] has " << df.assets.size() << " assets" << endl;
 
-        for (const xr::asset_entry& ae : df.assets) {
-          cout << "\t" << ae.filename.string() << endl;
+        if (vm.count("list-assets")) {
+          for (const xr::asset_entry& ae : df.assets) {
+            cout << "\t" << ae.filename.string() << endl;
+          }
         }
       }
     }
