@@ -41,9 +41,9 @@ int main(int argc, char* argv[]) {
       ("help,h", "produce help message")
       ("data-dir,d", po::value<string>(), "directory where the cat/dat files reside; if ommitted, current directory is used")
       ("data-file,f", po::value< vector<string> >(), "provide a list of .cat file; can be used multiple times")
+      ("destination-dir,D", po::value<string>(), "destination directory")
       ("list-assets,l", "list assets for each data file")
-      ("filter-assets,F", po::value< string >(), "only extract given assets")
-      ("interactive,i", "ask before performing write disk operations")
+      ("filter-assets,F", po::value< string >(), "extract assets matching the given regular expression, visit http://en.cppreference.com/w/cpp/regex/ecmascript for more info")
       ("version,v", "print program information")
       ;
 
@@ -61,13 +61,35 @@ int main(int argc, char* argv[]) {
       return EXIT_SUCCESS;
     }
 
-    regex filter_pattern {};
+    if (vm.count("data-dir") == 0 && vm.count("data-file") == 0) {
+      cerr << "error: no data files supplied" << endl;
+      return EXIT_FAILURE;
+    }
+
+    string filter_pattern {};
+    regex filter {};
     if (vm.count("filter-assets")) {
       filter_pattern = vm["filter-assets"].as<string>();
+      filter = filter_pattern;
     }
 
     xr::data_file_entries dfs {};
     
+    if (vm.count("data-dir")) {
+      fs::path data_dir = vm["data-dir"].as<string>();
+      if (fs::is_directory(data_dir)) {
+        cout << "info: data directory is: " << data_dir.string() << endl;
+        xr::data_file_entries dirdfs = xr::get_data_files_from_directory(data_dir);
+        if (!dirdfs.empty()) {
+          move(dirdfs.begin(), dirdfs.end(), back_inserter(dfs));
+        }
+      }
+      else {
+        cerr << "error: data directory either does not exist or is not a directory." << endl;
+        return EXIT_FAILURE;
+      }
+    }
+
     if (vm.count("data-file")) {
       vector<string> catfiles = vm["data-file"].as< vector<string> >();
       xr::data_file_entries catdfs = xr::get_data_files_from_filenames(catfiles);
@@ -76,36 +98,34 @@ int main(int argc, char* argv[]) {
       }
     }
 
-    fs::path data_dir {};
-    if (vm.count("data-dir")) {
-      data_dir = vm["data-dir"].as<string>();
-    }
-    else {
-      cout << "Data directory not set. Using current working directory." << endl;
-      data_dir = fs::current_path();
-    }
-
-    if (fs::is_directory(data_dir)) {
-      cout << "Data directory is: " << data_dir.string() << endl;
-      xr::data_file_entries dirdfs = xr::get_data_files_from_directory(data_dir);
-      if (!dirdfs.empty()) {
-        move(dirdfs.begin(), dirdfs.end(), back_inserter(dfs));
-      }
-    }
-    else {
-      cerr << "error: data directory either does not exist or is not a directory." << endl;
-    }
-
     if (dfs.empty() == false) {
-      cout << "\n";
+      fs::path dest_dir {fs::current_path()};
+      if (vm.count("destination-dir")) {
+        dest_dir = vm["destination-dir"].as<string>();
+        if (!dest_dir.is_absolute()) {
+          dest_dir = absolute(dest_dir);
+        }
+      }
+      cout << "info: destination directory: " << dest_dir.string() << endl;
+      if (!fs::exists(dest_dir)) {
+        fs::create_directories(dest_dir);
+      }
+      
       for (xr::data_file& df : dfs) {
-        cout << "data file [" << df.dat.string() << "] has " << df.assets.size() << " assets" << endl;
+        cout << "info: data file [" << df.dat.string() << "] has " << df.assets.size() << " assets" << endl;
+        df.dest_dir = dest_dir;
 
+        int assets_count = df.assets.size();
         if (vm.count("filter-assets")) {
+          cout << "info: filtering assets: /" << filter_pattern << "/" << endl;
+          assets_count = 0;
           for (xr::asset_entry& ae : df.assets) {
-            if (!regex_search(ae.filename.string(), filter_pattern)) {
+            if (!regex_search(ae.filename.string(), filter)) {
               // Skip extracting this asset.
               ae.skip = true;
+            }
+            else {
+              assets_count++;
             }
           }
         }
@@ -117,9 +137,13 @@ int main(int argc, char* argv[]) {
             }
           }
         }
-        else {
-          cout << "extracting assets: " << endl;
+        else if (assets_count) {
+          cout << "info: extracting assets: " << endl;
           xr::extract_assets(df);
+          cout << "info: done extracting assets" << endl;
+        }
+        else {
+          cout << "info: no assets to extract" << endl;
         }
       }
     }

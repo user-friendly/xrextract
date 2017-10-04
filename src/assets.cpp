@@ -23,11 +23,15 @@ namespace xrextract {
         dat_in.seekg(ae.size, ios_base::cur);
         continue;
       }
-      cout << "extract " << ae.filename.string() << " ... " << flush;
       
-      fs::create_directories(ae.filename.parent_path());
+      fs::path asset_path {df.dest_dir};
+      asset_path /= ae.filename;
       
-      ofstream asset_out {ae.filename.string(), ios_base::out | ios_base::binary | ios_base::trunc};
+      cout << "info: extracting " << ae.filename.string() << " to " << asset_path.string() << endl;
+      
+      fs::create_directories(asset_path.parent_path());
+      
+      ofstream asset_out {asset_path.string(), ios_base::out | ios_base::binary | ios_base::trunc};
 
       written_bytes = 0;
       
@@ -67,8 +71,6 @@ namespace xrextract {
           return;
         }
       }
-
-      cout << "done" << endl;
     };
   };
   

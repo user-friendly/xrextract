@@ -63,6 +63,7 @@ namespace xrextract {
     path_string name;
     fs::path cat;
     fs::path dat;
+    fs::path dest_dir;
 
     asset_entries assets;
   };
