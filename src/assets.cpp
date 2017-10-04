@@ -13,27 +13,18 @@ using namespace std;
 
 namespace xrextract {
   void extract_assets(const data_file& df) {
-    throw runtime_error("TODO Implement void extract_assets(const data_file& df)");
-  ;}
-  
-  void extract_assets(const data_file& df, const regex& filter) {
     array<char, 4096> rdbuff;
     ifstream dat_in {df.dat.string()};
     uint64_t read_bytes {0}, written_bytes {0};
     streamsize read_chunk_size {0};
     
     for (const asset_entry& ae : df.assets) {
-      if (!regex_search(ae.filename.string(), filter)) {
+      if (ae.skip) {
         dat_in.seekg(ae.size, ios_base::cur);
         continue;
       }
       cout << "extract " << ae.filename.string() << " ... " << flush;
-
-      // cout << "root_name: " << ae.filename.root_name().string() << endl;
-      // cout << "root_directory: " << ae.filename.root_directory().string() << endl;
-      // cout << "root_path: " << ae.filename.root_path().string() << endl;
-      // cout << "relative_path: " << ae.filename.relative_path().string() << endl;
-      //cout << "parent_path: " << ae.filename.parent_path().string() << endl;
+      
       fs::create_directories(ae.filename.parent_path());
       
       ofstream asset_out {ae.filename.string(), ios_base::out | ios_base::binary | ios_base::trunc};
@@ -216,7 +207,7 @@ namespace xrextract {
       al::trim(rel_path);
 
       // Construct a new asset entry.
-      asset_entry ae{ rel_path, sz, ts,{} };
+      asset_entry ae{ rel_path, sz, ts, {}, false };
 
       if (md5.length() == 32) {
         // @TODO Consider using another approach.

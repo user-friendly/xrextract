@@ -42,6 +42,9 @@ namespace xrextract {
     // @TODO Maybe a string would be better here?
 
     md5sum checksum;
+
+    // Whether to skip extraction or not.
+    bool skip;
   };
 
   /**
@@ -75,7 +78,6 @@ namespace xrextract {
   asset_entries get_assets(const data_file& df);
 
   void extract_assets(const data_file& df);
-  void extract_assets(const data_file& df, const regex& filter);
 }
 
 #endif // __ASSETS_HPP

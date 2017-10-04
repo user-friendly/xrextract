@@ -43,6 +43,7 @@ int main(int argc, char* argv[]) {
       ("data-file,f", po::value< vector<string> >(), "provide a list of .cat file; can be used multiple times")
       ("list-assets,l", "list assets for each data file")
       ("filter-assets,F", po::value< string >(), "only extract given assets")
+      ("interactive,i", "ask before performing write disk operations")
       ("version,v", "print program information")
       ;
 
@@ -97,32 +98,28 @@ int main(int argc, char* argv[]) {
 
     if (dfs.empty() == false) {
       cout << "\n";
-      for (const xr::data_file& df : dfs) {
+      for (xr::data_file& df : dfs) {
         cout << "data file [" << df.dat.string() << "] has " << df.assets.size() << " assets" << endl;
 
-        if (vm.count("list-assets")) {
-          if (vm.count("filter-assets")) {
-            for (const xr::asset_entry& ae : df.assets) {
-              if (regex_search(ae.filename.string(), filter_pattern)) {
-                cout << "F";
-              }
-              cout << "\t" << ae.filename.string() << endl;
+        if (vm.count("filter-assets")) {
+          for (xr::asset_entry& ae : df.assets) {
+            if (!regex_search(ae.filename.string(), filter_pattern)) {
+              // Skip extracting this asset.
+              ae.skip = true;
             }
           }
-          else {
-            for (const xr::asset_entry& ae : df.assets) {
+        }
+        
+        if (vm.count("list-assets")) {
+          for (xr::asset_entry& ae : df.assets) {
+            if (!ae.skip) {
               cout << "\t" << ae.filename.string() << endl;
             }
           }
         }
         else {
           cout << "extracting assets: " << endl;
-          if (vm.count("filter-assets")) {
-            xr::extract_assets(df, filter_pattern);
-          }
-          else {
-            xr::extract_assets(df);
-          }
+          xr::extract_assets(df);
         }
       }
     }
