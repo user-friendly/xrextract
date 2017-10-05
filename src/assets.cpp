@@ -16,7 +16,6 @@ namespace xrextract {
     array<char, 4096> rdbuff;
     ifstream dat_in {df.dat.string()};
     unsigned int chunks_to_read{ 0 }, remainder_to_read{ 0 };
-    streamsize read_chunk_size {0};
     
     for (const asset_entry& ae : df.assets) {
       if (ae.skip) {
@@ -25,8 +24,8 @@ namespace xrextract {
       }
 
       if (ae.size == 0) {
-        // Yup, it's pretty bad, but it's alpha.
-        throw runtime_error("TODO Implement asset deletion!");
+        cout << "info: deleting file " << ae.filename.string() << endl;
+        fs::remove(ae.filename);
         continue;
       }
       
@@ -36,36 +35,36 @@ namespace xrextract {
       cout << "info: extracting " << ae.filename.string() << " to " << asset_path.string() << endl;
       
       fs::create_directories(asset_path.parent_path());
-      
+
       ofstream asset_out {asset_path.string(), ios_base::out | ios_base::binary | ios_base::trunc};
       
-      if (chunks_to_read) {
-        // Implementation should round the quotient towards zero, after C++11.
-        for (chunks_to_read = ae.size / rdbuff.size(); chunks_to_read > 0; chunks_to_read--) {
-          // Clear read buffer.
-          fill(rdbuff.begin(), rdbuff.end(), 0);
-          // Read from .dat file.
-          dat_in.read(rdbuff.data(), read_chunk_size);
-          // Make sure the exact amount was written.
-          if (dat_in.good()) {
-            if (dat_in.gcount() == rdbuff.size()) {
-              // Write out read buffer to asset file output stream.
-              asset_out.write(rdbuff.data(), dat_in.gcount());
-              if (!asset_out.good()) {
-                throw runtime_error("error: could not write to asset file");
-              }
-            }
-            else {
-              throw runtime_error("error: incorrect amount of bytes read from .dat file");
+      // Implementation should round the quotient towards zero, after C++11.
+      for (chunks_to_read = (ae.size / rdbuff.size()); chunks_to_read > 0; --chunks_to_read) {
+        // Clear read buffer.
+        fill(rdbuff.begin(), rdbuff.end(), 0);
+        // Read from .dat file.
+        dat_in.read(rdbuff.data(), rdbuff.size());
+        // Make sure the exact amount was written.
+        if (dat_in.good()) {
+          if (dat_in.gcount() == rdbuff.size()) {
+            // Write out read buffer to asset file output stream.
+            asset_out.write(rdbuff.data(), dat_in.gcount());
+            if (!asset_out.good()) {
+              throw runtime_error("error: could not write to asset file");
             }
           }
           else {
-            throw runtime_error("error: there was in issue while reading the .dat");
+            cerr << "error: expected to read " << rdbuff.size() << ", read: " << dat_in.gcount() << endl;
+            throw runtime_error("error: incorrect amount of bytes read from .dat file");
           }
         }
+        else {
+          throw runtime_error("error: there was in issue while reading the .dat");
+        }
       }
-
-      if (remainder_to_read = ae.size % rdbuff.size()) {
+      
+      remainder_to_read = ae.size % rdbuff.size();
+      if (remainder_to_read) {
         fill(rdbuff.begin(), rdbuff.end(), 0);
         dat_in.read(rdbuff.data(), remainder_to_read);
         if (dat_in.good()) {

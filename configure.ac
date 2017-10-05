@@ -3,7 +3,7 @@
 #
 
 AC_PREREQ([2.68])
-AC_INIT([X-Rebirth data extractor], [0.1.alpha], [pivanov@foobar.ninja])
+AC_INIT([X-Rebirth data extractor], [0.1], [pivanov@foobar.ninja])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_SRCDIR([src/main.cpp])
 AC_CONFIG_HEADERS([config.h])
