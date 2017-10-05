@@ -83,6 +83,9 @@ namespace xrextract {
           throw runtime_error("error: there was in issue while reading the .dat");
         }
       }
+
+      // @TODO Implement file MD5 checksum.
+      // @TODO Apply timestamp.
     };
   };
   
