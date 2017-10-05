@@ -7,6 +7,8 @@
 // There might be no need to back reference any cat entries.
 // Parse one line at a time and move the .dat "pointer" forward.
 
+// @FIXME Cat file reads are pretty slow. Optimize.
+
 #include "extlibs.hpp"
 #include "assets.hpp"
 #include "filesystem.hpp"
@@ -21,6 +23,15 @@ namespace xr = xrextract;
  * Print legal information.
  */
 void print_legal();
+
+// Base game1
+// 01.dat
+// 
+
+// Extensions
+// 
+
+
 
 /**
  * Program's main entry point.
@@ -115,11 +126,13 @@ int main(int argc, char* argv[]) {
         cout << "info: data file [" << df.dat.string() << "] has " << df.assets.size() << " assets" << endl;
         df.dest_dir = dest_dir;
 
+        uint64_t assets_total_size{ 0 };
         int assets_count = df.assets.size();
         if (vm.count("filter-assets")) {
           cout << "info: filtering assets: /" << filter_pattern << "/" << endl;
           assets_count = 0;
           for (xr::asset_entry& ae : df.assets) {
+            assets_total_size += ae.size;
             if (!regex_search(ae.filename.string(), filter)) {
               // Skip extracting this asset.
               ae.skip = true;
@@ -128,6 +141,18 @@ int main(int argc, char* argv[]) {
               assets_count++;
             }
           }
+        }
+        else {
+          // Just calculate the total assets size.
+          for (xr::asset_entry& ae : df.assets) {
+            assets_total_size += ae.size;
+          }
+        }
+
+        if (assets_total_size != fs::file_size(df.dat)) {
+          stringstream ss{};
+          ss << "error: dat file size mismatch with assets size, .dat is " << fs::file_size(df.dat) << ", assets are " << assets_total_size;
+          throw runtime_error(ss.str());
         }
         
         if (vm.count("list-assets")) {

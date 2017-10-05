@@ -15,12 +15,18 @@ namespace xrextract {
   void extract_assets(const data_file& df) {
     array<char, 4096> rdbuff;
     ifstream dat_in {df.dat.string()};
-    uint64_t read_bytes {0}, written_bytes {0};
+    unsigned int chunks_to_read{ 0 }, remainder_to_read{ 0 };
     streamsize read_chunk_size {0};
     
     for (const asset_entry& ae : df.assets) {
       if (ae.skip) {
         dat_in.seekg(ae.size, ios_base::cur);
+        continue;
+      }
+
+      if (ae.size == 0) {
+        // Yup, it's pretty bad, but it's alpha.
+        throw runtime_error("TODO Implement asset deletion!");
         continue;
       }
       
@@ -32,43 +38,50 @@ namespace xrextract {
       fs::create_directories(asset_path.parent_path());
       
       ofstream asset_out {asset_path.string(), ios_base::out | ios_base::binary | ios_base::trunc};
-
-      written_bytes = 0;
       
-      // Asset entry size is in bytes.
-      while (written_bytes < ae.size) {
-        if (!dat_in.good()) {
-          break;
-        }
-        fill(rdbuff.begin(), rdbuff.end(), 0);
-
-        read_chunk_size = rdbuff.size();
-        if (written_bytes + read_chunk_size > ae.size) {
-          read_chunk_size = written_bytes % rdbuff.size();
-        }
-        dat_in.read(rdbuff.data(), read_chunk_size);
-        if (dat_in.gcount() > 0) {
-          // Bytes were read.
-          if (rdbuff.size() >= dat_in.gcount()) {
-            
-            // Write read buffer to asset file.
-            asset_out.write(rdbuff.data(), dat_in.gcount());
-            if (asset_out.good()) {
-              written_bytes += read_bytes;
+      if (chunks_to_read) {
+        // Implementation should round the quotient towards zero, after C++11.
+        for (chunks_to_read = ae.size / rdbuff.size(); chunks_to_read > 0; chunks_to_read--) {
+          // Clear read buffer.
+          fill(rdbuff.begin(), rdbuff.end(), 0);
+          // Read from .dat file.
+          dat_in.read(rdbuff.data(), read_chunk_size);
+          // Make sure the exact amount was written.
+          if (dat_in.good()) {
+            if (dat_in.gcount() == rdbuff.size()) {
+              // Write out read buffer to asset file output stream.
+              asset_out.write(rdbuff.data(), dat_in.gcount());
+              if (!asset_out.good()) {
+                throw runtime_error("error: could not write to asset file");
+              }
             }
             else {
-              cerr << "error: failed to write to asset file" << endl;
-              return;
+              throw runtime_error("error: incorrect amount of bytes read from .dat file");
             }
           }
           else {
-            cerr << "error: read more bytes than buffer can hold" << endl;
-            return;
+            throw runtime_error("error: there was in issue while reading the .dat");
+          }
+        }
+      }
+
+      if (remainder_to_read = ae.size % rdbuff.size()) {
+        fill(rdbuff.begin(), rdbuff.end(), 0);
+        dat_in.read(rdbuff.data(), remainder_to_read);
+        if (dat_in.good()) {
+          if (dat_in.gcount() == remainder_to_read) {
+            // Write out read buffer to asset file output stream.
+            asset_out.write(rdbuff.data(), dat_in.gcount());
+            if (!asset_out.good()) {
+              throw runtime_error("error: could not write to asset file");
+            }
+          }
+          else {
+            throw runtime_error("error: incorrect amount of bytes read from .dat file");
           }
         }
         else {
-          cerr << "error: failed to read from dat file" << endl;
-          return;
+          throw runtime_error("error: there was in issue while reading the .dat");
         }
       }
     };
@@ -99,7 +112,7 @@ namespace xrextract {
       start_time = chrono::steady_clock::now(),
       current_time = chrono::steady_clock::now();
     
-    cout << "info: get assets list from file " << df.cat.native() <<  "... " << flush;
+    cout << "info: get assets list from file " << df.cat.string() <<  "... " << flush;
 
     // Line number counter.
     uint32_t ln { 0 };
