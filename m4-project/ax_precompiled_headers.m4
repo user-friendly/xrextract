@@ -17,7 +17,7 @@
 #
 # LICENSE
 #
-#   Copyright (c) 2014 Plamen Ivanov <qnq6666@gmail.com>
+#   Copyright (c) 2014 Plamen Ivanov <pivanov@foobar.ninja>
 #
 #   Copying and distribution of this file, with or without modification, are
 #   permitted in any medium without royalty provided the copyright notice
